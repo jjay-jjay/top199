@@ -12,18 +12,6 @@ const firebaseConfig = {
     measurementId: "G-T3FXEM5N81"
 };
 
-let app;
-let db;
-let auth;
-
-try {
-    app = initializeApp(firebaseConfig);
-    db = getFirestore(app);
-    auth = getAuth(app);
-    console.log("Firebase initialized successfully");
-} catch (error) {
-    console.error("Firebase initialization error:", error);
-    throw error;
-}
-
-export { db, auth };
+const app = initializeApp(firebaseConfig);
+export const db = getFirestore(app);
+export const auth = getAuth(app);
