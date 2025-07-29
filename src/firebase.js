@@ -2,7 +2,6 @@ import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from 'firebase/auth';
 
-
 const firebaseConfig = {
     apiKey: "AIzaSyDaP4odjM7cLmQ5Tp_auPo4xSLPOgFn-No",
     authDomain: "topic-42a89.firebaseapp.com",
@@ -13,12 +12,18 @@ const firebaseConfig = {
     measurementId: "G-T3FXEM5N81"
 };
 
+let app;
+let db;
+let auth;
+
 try {
-    const app = initializeApp(firebaseConfig);
-    export const db = getFirestore(app);
-    export const auth = getAuth(app);
+    app = initializeApp(firebaseConfig);
+    db = getFirestore(app);
+    auth = getAuth(app);
     console.log("Firebase initialized successfully");
 } catch (error) {
     console.error("Firebase initialization error:", error);
     throw error;
 }
+
+export { db, auth };
