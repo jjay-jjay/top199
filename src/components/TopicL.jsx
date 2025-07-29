@@ -7,79 +7,87 @@ import "./TopicL.css";
 function TopicL() {
   const [topics, setTopics] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [initialized, setInitialized] = useState(false);  // A: track first load
+  const [error, setError] = useState(null);
+  const [initialized, setInitialized] = useState(false);
   const [clickCount, setClickCount] = useState(0);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const topicsRef = collection(db, "topics");
-    const groupsRef = collection(db, "groups");
+    try {
+      const topicsRef = collection(db, "topics");
+      const groupsRef = collection(db, "groups");
 
-    let topicsData = [];
-    let groupCountMap = {};
+      let topicsData = [];
+      let groupCountMap = {};
 
-    // A & C: compute pct and manage loading only once
-    const updateMerged = () => {
-      const merged = topicsData.map(topic => {
-        const count = groupCountMap[topic.id] || 0;
-        return {
-          ...topic,
-          groupCount: count,
-          pct: (count / topic.maxGroups) * 100  // C: precompute percentage
-        };
-      });
-      setTopics(merged);
-      if (!initialized) {
-        setLoading(false);
-        setInitialized(true);
-      }
-    };
-
-    // B: use docChanges for topics to update only diffs
-    const unsubTopics = onSnapshot(
-      topicsRef,
-      snapshot => {
-        snapshot.docChanges().forEach(change => {
-          const doc = { id: change.doc.id, ...change.doc.data() };
-          if (change.type === 'added') {
-            topicsData.push(doc);
-          } else if (change.type === 'modified') {
-            const idx = topicsData.findIndex(t => t.id === doc.id);
-            if (idx >= 0) topicsData[idx] = doc;
-          } else if (change.type === 'removed') {
-            topicsData = topicsData.filter(t => t.id !== doc.id);
-          }
+      const updateMerged = () => {
+        const merged = topicsData.map(topic => {
+          const count = groupCountMap[topic.id] || 0;
+          return {
+            ...topic,
+            groupCount: count,
+            pct: (count / topic.maxGroups) * 100
+          };
         });
-        updateMerged();
-      },
-      error => {
-        console.error("Error fetching topics:", error);
+        setTopics(merged);
         if (!initialized) {
           setLoading(false);
           setInitialized(true);
         }
-      }
-    );
+      };
 
-    // D: real-time groups only; merge into topicsData
-    const unsubGroups = onSnapshot(
-      groupsRef,
-      snapshot => {
-        groupCountMap = {};
-        snapshot.docs.forEach(groupDoc => {
-          const data = groupDoc.data();
-          const tId = data.topicId?.id || data.topicId;
-          if (tId) groupCountMap[tId] = (groupCountMap[tId] || 0) + 1;
-        });
-        updateMerged();
-      },
-      error => console.error("Error fetching groups:", error)
-    );
+      const unsubTopics = onSnapshot(
+        topicsRef,
+        snapshot => {
+          snapshot.docChanges().forEach(change => {
+            const doc = { id: change.doc.id, ...change.doc.data() };
+            if (change.type === 'added') {
+              topicsData.push(doc);
+            } else if (change.type === 'modified') {
+              const idx = topicsData.findIndex(t => t.id === doc.id);
+              if (idx >= 0) topicsData[idx] = doc;
+            } else if (change.type === 'removed') {
+              topicsData = topicsData.filter(t => t.id !== doc.id);
+            }
+          });
+          updateMerged();
+        },
+        error => {
+          console.error("Error fetching topics:", error);
+          setError("Failed to load topics. Please try again.");
+          if (!initialized) {
+            setLoading(false);
+            setInitialized(true);
+          }
+        }
+      );
 
-    return () => {
-      unsubTopics();
-      unsubGroups();
-    };
+      const unsubGroups = onSnapshot(
+        groupsRef,
+        snapshot => {
+          groupCountMap = {};
+          snapshot.docs.forEach(groupDoc => {
+            const data = groupDoc.data();
+            const tId = data.topicId?.id || data.topicId;
+            if (tId) groupCountMap[tId] = (groupCountMap[tId] || 0) + 1;
+          });
+          updateMerged();
+        },
+        error => {
+          console.error("Error fetching groups:", error);
+          setError("Failed to load groups. Please try again.");
+        }
+      );
+
+      return () => {
+        unsubTopics();
+        unsubGroups();
+      };
+    } catch (error) {
+      console.error("Error in TopicL useEffect:", error);
+      setError("Failed to initialize. Please refresh the page.");
+      setLoading(false);
+    }
   }, [initialized]);
 
   const handleTitleClick = () => {
@@ -88,6 +96,18 @@ function TopicL() {
       navigate("/login");
     }
   };
+
+  if (error) {
+    return (
+      <div className="error-container">
+        <h2>Error</h2>
+        <p>{error}</p>
+        <button onClick={() => window.location.reload()}>
+          Refresh Page
+        </button>
+      </div>
+    );
+  }
 
   if (loading) return (
     <div className="loading-container">

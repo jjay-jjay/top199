@@ -13,6 +13,12 @@ const firebaseConfig = {
     measurementId: "G-T3FXEM5N81"
 };
 
-const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
-export const auth = getAuth(app);
+try {
+    const app = initializeApp(firebaseConfig);
+    export const db = getFirestore(app);
+    export const auth = getAuth(app);
+    console.log("Firebase initialized successfully");
+} catch (error) {
+    console.error("Firebase initialization error:", error);
+    throw error;
+}
